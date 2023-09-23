@@ -186,7 +186,7 @@ void UnlockAce(HPMPluginInstance &inst, int no, uint32_t key)
     printf("OK\n");
 }
 
-void DoVDM(HPMPluginInstance &inst, int no, std::vector<uint32_t> vdm)
+auto DoVDM(HPMPluginInstance &inst, int no, std::vector<uint32_t> vdm)
 {
 
     auto rs = inst.readRegister(no, 0x4d);
@@ -217,10 +217,31 @@ void DoVDM(HPMPluginInstance &inst, int no, std::vector<uint32_t> vdm)
     get(reply, rxst);
     get(reply, vdmhdr);
 
-    if (vdmhdr != (vdm[0] | 0x40)) {
-        printf("VDM failed (reply: 0x%08x)\n", vdmhdr);
+    if ((vdmhdr != (vdm[0] | 0x40)) && (vdmhdr != (vdm[0] | 0x840))) {
+        printf("VDM failed (reply: 0x%08x - expected: %08x)\n", vdmhdr, vdm[0] | 0x40);
         throw failure("VDM failed");
     }
+
+    return reply.str().substr(reply.tellg());
+}
+
+
+int DoActions(HPMPluginInstance &inst, int no) {
+    std::vector<uint32_t> actions{0x5AC8010};
+    auto r = DoVDM(inst, no, actions);
+    printf("Supported actions:\n");
+    for(int i=0; i < r.size()/2; i++) {
+        uint16_t r1 = r[i*2] & 0xFF;
+        uint16_t r2 = r[i*2+1] & 0xFF;
+        uint16_t action = (r2 << 8) | r1;
+        if(action == 0x0000) {
+            break;
+        }
+        printf("- %04X\n", action);
+    }
+
+    printf("OK\n");
+    return 0;
 }
 
 int DoSerial(HPMPluginInstance &inst, int no)
@@ -307,6 +328,7 @@ int main2(int argc, char **argv)
         printf("  reboot serial - reboot the target and enter serial mode\n");
         printf("  dfu - put the target into DFU mode\n");
         printf("  nop - do nothing\n");
+        printf("  actions - get supported actions\n");
         return 1;
     }
 
@@ -358,6 +380,8 @@ int main2(int argc, char **argv)
         return DoDFU(*inst, no);
     else if (cmd == "nop")
         return 0;
+    else if (cmd == "actions")
+        return DoActions(*inst, no);
 
     printf("Unknown command\n");
     return 1;

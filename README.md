@@ -1,5 +1,7 @@
 # Apple Silicon to Apple Silicon VDM tool
 
+In progress version with basic support for iPhone 15 & support for listing actions.
+
 This tool lets you get a serial console on an Apple Silicon device and reboot it remotely, using only another Apple Silicon device running macOS and a standard Type C cable.
 
 ## Disclaimer
