@@ -74,6 +74,8 @@ Commands:
   reboot serial - reboot the target and enter serial mode
   dfu - put the target into DFU mode
   nop - do nothing
+  actions - get supported actions
+  action <id> - get action info
 ```
 
 Use `/dev/cu.debug_console` on the local machine as your serial device. To use it with m1n1, `export M1N1DEVICE=/dev/cu.debug-console`.
