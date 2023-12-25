@@ -1,5 +1,13 @@
 # Apple Silicon to Apple Silicon VDM tool
 
+## Quickest Start:
+
+* `brew tap hack-different/jailbreak`
+* `brew update`
+* `brew install macvdmtool`
+
+## Introduction
+
 This tool lets you send common Apple VDM messages from an Apple Sillicon Mac.  It can send messages to the T2 DFU port, the Apple M1 DFU port or any USB-C based iPad.  Currently it requires the sending device to be M1 based and the "DFU" port, but it should be possible to use any port and work from an Intel Mac (they have the same USB-C port controller) with some additonal patching.
 
 `dfu` and `reboot` are confirmed to work on iPad and T2.  Serial can probably be adapted to work with checkra1n.
