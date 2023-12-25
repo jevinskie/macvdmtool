@@ -23,7 +23,7 @@ This is based on portions of [ThunderboltPatcher](https://github.com/osy/Thunder
 * Copyright (C) 2019 osy86. All rights reserved.
 * Copyright (C) 2021 The Asahi Linux Contributors
 
-Thanks to t8012.dev and mrarm for assistance with the VDM and Ace2 host interface commands.
+Thanks to [t8012.dev](https://t8012.dev) and mrarm for assistance with the VDM and Ace2 host interface commands.
 
 ## Note about macOS 12
 
