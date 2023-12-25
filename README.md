@@ -12,6 +12,7 @@ This tool lets you send common Apple VDM messages from an Apple Sillicon Mac.  I
 
 `dfu` and `reboot` are confirmed to work on iPad and T2.  Serial can probably be adapted to work with checkra1n.
 
+
 ## Disclaimer
 
 I have no idea what I'm doing with IOKit and CoreFoundation -marcan
@@ -126,6 +127,8 @@ Commands:
   reboot serial - reboot the target and enter serial mode
   dfu - put the target into DFU mode
   nop - do nothing
+  actions - get supported actions
+  action <id> - get action info
 ```
 
 Use `/dev/cu.debug_console` on the local machine as your serial device. To use it with m1n1, `export M1N1DEVICE=/dev/cu.debug-console`.

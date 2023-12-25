@@ -99,7 +99,7 @@ uint32_t GetUnlockKey()
 
     io_iterator_t iter = 0;
     IOObjectDeleter iterDel(iter);
-    io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, matching);
+    io_service_t service = IOServiceGetMatchingService(kIOMainPortDefault, matching);
     if (!service)
         throw failure("IOServiceGetMatchingService failed (IOPED)");
 
@@ -127,7 +127,7 @@ std::unique_ptr<HPMPluginInstance> FindDevice()
 
     io_iterator_t iter = 0;
     IOObjectDeleter iterDel(iter);
-    if (IOServiceGetMatchingServices(kIOMasterPortDefault, matching, &iter) != kIOReturnSuccess)
+    if (IOServiceGetMatchingServices(kIOMainPortDefault, matching, &iter) != kIOReturnSuccess)
         throw failure("IOServiceGetMatchingServices failed");
 
     io_service_t device;
@@ -186,7 +186,7 @@ void UnlockAce(HPMPluginInstance &inst, int no, uint32_t key)
     printf("OK\n");
 }
 
-void DoVDM(HPMPluginInstance &inst, int no, std::vector<uint32_t> vdm)
+auto DoVDM(HPMPluginInstance &inst, int no, std::vector<uint32_t> vdm)
 {
 
     auto rs = inst.readRegister(no, 0x4d);
@@ -217,10 +217,61 @@ void DoVDM(HPMPluginInstance &inst, int no, std::vector<uint32_t> vdm)
     get(reply, rxst);
     get(reply, vdmhdr);
 
-    if (vdmhdr != (vdm[0] | 0x40)) {
-        printf("VDM failed (reply: 0x%08x)\n", vdmhdr);
+    if ((vdmhdr != (vdm[0] | 0x40)) && (vdmhdr != (vdm[0] | 0x840))) {
+        printf("VDM failed (reply: 0x%08x - expected: 0x%08x)\n", vdmhdr, vdm[0] | 0x40);
         throw failure("VDM failed");
     }
+
+    return reply.str().substr(reply.tellg());
+}
+
+void DumpData(std::string name, const void *data, size_t size) {
+    const uint8_t *buf = static_cast<const uint8_t*>(data);
+    printf("%s:\n", name.c_str());
+    for (size_t i = 0; i < size; ++i) {
+        printf("%02X", buf[i]);
+    }
+    printf("\n");
+}
+
+int DoActions(HPMPluginInstance &inst, int no) {
+    std::vector<uint32_t> actions{0x5AC8010};
+    auto r = DoVDM(inst, no, actions);
+    //DumpData("Output", r.data(), r.size());
+    printf("Supported actions:\n");
+    for (size_t i = 0; i < r.size() / 2; i++) {
+        uint16_t r1 = r[i * 2 + 0] & 0xFF;
+        uint16_t r2 = r[i * 2 + 1] & 0xFF;
+        uint16_t action = (r2 << 8) | r1;
+        if (action == 0) {
+            break;
+        }
+        printf("- 0x%04X\n", action);
+    }
+
+    printf("OK\n");
+    return 0;
+}
+
+int DoActionInfo(HPMPluginInstance &inst, int no, uint16_t action) {
+    std::vector<uint32_t> actions{0x5AC8011, action};
+    auto r = DoVDM(inst, no, actions);
+    //DumpData("Output", r.data(), r.size());
+    if (!r.empty()) {
+        printf("-");
+        for (size_t i = 0; i < r.size() / 2; i++) {
+            uint16_t r1 = r[i * 2 + 0] & 0xFF;
+            uint16_t r2 = r[i * 2 + 1] & 0xFF;
+            uint16_t value = (r2 << 8) | r1;
+            if (value == 0) {
+                break;
+            }
+            printf(" 0x%04X", value);
+        }
+        printf("\n");
+    }
+    printf("OK\n");
+    return 0;
 }
 
 int DoSerial(HPMPluginInstance &inst, int no)
@@ -307,6 +358,8 @@ int main2(int argc, char **argv)
         printf("  reboot serial - reboot the target and enter serial mode\n");
         printf("  dfu - put the target into DFU mode\n");
         printf("  nop - do nothing\n");
+        printf("  actions - get supported actions\n");
+        printf("  action <id> - get action info\n");
         return 1;
     }
 
@@ -347,17 +400,23 @@ int main2(int argc, char **argv)
     if (argc >= 3)
         arg = argv[2];
 
-    if (cmd == "serial")
+    if (cmd == "serial") {
         return DoSerial(*inst, no);
-    else if (cmd == "reboot") {
+    } else if (cmd == "reboot") {
         if (arg == "serial")
             return DoRebootSerial(*inst, no);
         else
             return DoReboot(*inst, no);
-    } else if (cmd == "dfu")
+    } else if (cmd == "dfu") {
         return DoDFU(*inst, no);
-    else if (cmd == "nop")
+    } else if (cmd == "nop") {
         return 0;
+    } else if (cmd == "actions") {
+        return DoActions(*inst, no);
+    } else if (cmd == "action") {
+        uint16_t action = static_cast<uint16_t>(std::stoul(arg, nullptr, 0));
+        return DoActionInfo(*inst, no, action);
+    }
 
     printf("Unknown command\n");
     return 1;
