@@ -1,2 +1,3 @@
 macvdmtool
 *.o
+build/

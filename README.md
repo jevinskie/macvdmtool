@@ -87,7 +87,17 @@ To revert back to the default kernel, enter 1TR again, access Utilities>Startup 
 
 ## Building
 
-Install the XCode commandline tools and type `make`.
+Install CMake and perform standard build
+
+```sh
+$ mkdir build
+$ cd build
+$ cmake ..
+$ make
+$ sudo make install
+```
+
+Why CMake?  Because it builds fat binaries automatically and handles other things that make this a tad easier.
 
 ## Usage
 
