@@ -1,6 +1,17 @@
 # Apple Silicon to Apple Silicon VDM tool
 
-This tool lets you get a serial console on an Apple Silicon device and reboot it remotely, using only another Apple Silicon device running macOS and a standard Type C cable.
+## Quickest Start:
+
+* `brew tap hack-different/jailbreak`
+* `brew update`
+* `brew install macvdmtool`
+
+## Introduction
+
+This tool lets you send common Apple VDM messages from an Apple Sillicon Mac.  It can send messages to the T2 DFU port, the Apple M1 DFU port or any USB-C based iPad.  Currently it requires the sending device to be M1 based and the "DFU" port, but it should be possible to use any port and work from an Intel Mac (they have the same USB-C port controller) with some additonal patching.
+
+`dfu` and `reboot` are confirmed to work on iPad and T2.  Serial can probably be adapted to work with checkra1n.
+
 
 ## Disclaimer
 
@@ -13,7 +24,41 @@ This is based on portions of [ThunderboltPatcher](https://github.com/osy/Thunder
 * Copyright (C) 2019 osy86. All rights reserved.
 * Copyright (C) 2021 The Asahi Linux Contributors
 
-Thanks to t8012.dev and mrarm for assistance with the VDM and Ace2 host interface commands.
+Thanks to [t8012.dev](https://t8012.dev) and mrarm for assistance with the VDM and Ace2 host interface commands.
+
+## Note about macOS 12
+
+To have access to the serial console device on macOS Monterey (12), you need to disable the `AppleSerialShim` extension.
+
+**Note:** This requires downgrading the system security and may cause problems with upgrades. Use it at your own risk!
+
+Start by generating a new kernel cache, without the `AppleSerialShim` extension:
+
+```
+sudo kmutil create -n boot -a arm64e -B /Library/KernelCollections/kc.noshim.macho -V release  -k /System/Library/Kernels/kernel.release.<soc> -r /System/Library/Extensions -r /System/Library/DriverExtensions -x $(kmutil inspect -V release --no-header | awk '!/AppleSerialShim/ { print " -b "$1; }')
+```
+
+Replace `<soc>` with `t8101` on M1 Macs and `t6000` on M1 Pro/Max Macs. If you’re unsure, `uname -v` and look at the end of the version string (`RELEASE_ARM64_<soc>`).
+
+Then, enter 1TR:
+
+1. Power off your Mac
+2. Press and hold the Power button until the boot menu appears
+3. Select “Options”, then (if necessary) select your macOS volume and enter your administrative password.
+
+Select Utilities>Startup security and switch the macOS installation to reduced security. Exit Startup security.
+
+Select Utilities>Terminal and install your custom kernel:
+
+```
+kmutil configure-boot -c /Volume/<volume>/Library/KernelCollections/kc.noshim.macho -C -v /Volume/<volume>
+```
+
+Replace `<volume>` with the name of your boot volume.
+
+You can now reboot: macOS should start as normal, and the serial device `/dev/cu.debug-console` should be available.
+
+To revert back to the default kernel, enter 1TR again, access Utilities>Startup security and switch to full or reduced security.
 
 ## Note about macOS 12
 
@@ -51,7 +96,17 @@ To revert back to the default kernel, enter 1TR again, access Utilities>Startup 
 
 ## Building
 
-Install the XCode commandline tools and type `make`.
+Install CMake and perform standard build
+
+```sh
+$ mkdir build
+$ cd build
+$ cmake ..
+$ make
+$ sudo make install
+```
+
+Why CMake?  Because it builds fat binaries automatically and handles other things that make this a tad easier.
 
 ## Usage
 
@@ -60,9 +115,9 @@ Connect the two devices via their DFU ports. That's:
  - the port next to the MagSafe connector on the 14" and 16" MacBook Pro
  - the port nearest to the power plug on Mac Mini
 
-You need to use a *USB 3.0 compatible* (SuperSpeed) Type C cable. USB 2.0-only cables, including most cables meant for charging, will not work, as they do not have the required pins. Thunderbolt cables work too.
+You need to use a *USB 3.0 compatible* (SuperSpeed) Type C cable. USB 2.0-only cables, including most cables meant for charging, will not work, as they do not have the required pins (USB CC1/CC2 where USB-PD are transmitted). Thunderbolt cables work too.
 
-Run it as root (`sudo ./macvdmtool`).
+Run it as root (`sudo ./macvdmtool`) as root privledge is required to open the needed IOKit IOService.
 
 ```
 Usage: ./macvdmtool <command>
@@ -72,6 +127,8 @@ Commands:
   reboot serial - reboot the target and enter serial mode
   dfu - put the target into DFU mode
   nop - do nothing
+  actions - get supported actions
+  action <id> - get action info
 ```
 
 Use `/dev/cu.debug_console` on the local machine as your serial device. To use it with m1n1, `export M1N1DEVICE=/dev/cu.debug-console`.
