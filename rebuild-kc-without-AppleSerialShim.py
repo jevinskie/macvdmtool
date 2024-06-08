@@ -109,7 +109,7 @@ def generate_no_shim_kc_install_script(vol_uuid: str) -> None:
     script_path = KC_NO_SHIM_PATH + ".installer.sh"
     with tempfile.NamedTemporaryFile("w", delete=False) as tmp:
         script = f"""\
-#!/usr/bin/env bash
+#!/bin/bash
 
 set -o errexit
 set -o nounset
